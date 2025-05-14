@@ -50,9 +50,67 @@ CAN 통신 기초
 	
 	- CAN_H - CAN_L 값이 0.9 ~ 5V = 0으로 표현
 	- CAN_H - CAN_L 값이 -0.1 ~ 0.5V = 1로 표현
+	- 즉, 0이면 서로 전압의 차이가 커지고 1이면 서로 전압의 차이가 작아짐
 
 	![CAN 0과1](https://github.com/breadcoffee/basic_CAN-2025/blob/main/image/image5.png)
 
 	- CAN 통신에서는 0은 dominant(우성 값), 1을 recessive(열성 값)으로 표현한다.
 	- 0의 값이 더 우선순위가 높다. 동시에 전기적인 신호를 발생하면 0과 1이 충돌하면 0의 값을 우선한다.
 
+## 2일차
+- CAN Tranceiver(Transmitter + Receiver) & CAN Controller
+	- 전자 장치들을 제어하기 위해선 제어기가 필요
+	- 제어기 안에는 여러 MCU(Micro Controller)가 존재함
+	- MCU 내부에는 CPU와 메모리를 비롯 다양한 하드웨어 장치가 존재 -> peripheral이라고 말함
+
+	![제어기 내부](https://github.com/breadcoffee/basic_CAN-2025/blob/main/image/image6.png)
+
+	- CAN Controller를 통해서 버스의 사용유무 감지, 메세지 보내기, 에러처리 등 통신에 필요한 직접적인 역할을 수행
+	- CAN Transceiver는 CAN_H인지 CAN_L인지 해석해 전압을 출력하는 역할을 함(들어오는 신호와 나가는 신호 둘 다 해석해줌)
+	- CAN Controller 에서 나가는 신호는 CAN TX 핀으로 들어오는 신호는 CAN RX 핀을 통해 들어옴
+
+	- CAN Controller : 메세지에 담기는 값을 처리 (Data Link Layer)
+	- CAN Transceiver : 실제로 전선에 출력되는 전압을 출력 (Physical Layer)
+
+- CAN Transceiver 데이터 시트 보기 (TJA1043)
+	- General description : 기본적인 정의 설명
+	- Functional description : 기능에 대한 설명
+	- Pinning information : 핀에 대한 설명, **제일 중요**
+	- Application information : 사용 예시에 대한 설명
+
+- BaudRate
+	- Baud Rate : 통신속도
+	- 단위 : bps(bit per second), bps가 크면 클수록 1초에 더 많은 bit를 보낼 수 있음
+	- 버스에 참여하고 있는 제어기들은 모두 같은 Baud Rate로 통신해야한다.
+	- CAN DB : 완성차 회사에서 필요한 Spec을 적어놓은 DB
+	
+	![BaudRate](https://github.com/breadcoffee/basic_CAN-2025/blob/main/image/image7.png)
+
+	- 프로토콜 별로 최대 속도가 정해져있다. (기본값은 High-Speed CAN임)
+	- 속도가 빨라질수록 Bus의 길이가 짧아진다.
+
+- Sampling Point
+	- Sampling Point : 하나의 비트 값이 0인지 1인지 판단하는 지점을 의미, 단위는 %이다.
+	- 이것도 OEM(제조사)에서 Spec으로 정해준다.
+
+	![Sampling Point](https://github.com/breadcoffee/basic_CAN-2025/blob/main/image/image8.png)
+
+	- CAN에서는 1bit를 위 그림처럼 Sync, TSEG1, TSEG2 3개의 구간으로 분류한다.
+	- TSEG1, TSEG2의 길이를 세는 단위는 Time Qunta이다. (Time Qunta는 100Hz이면 0.01초, 1000Hz이면 0.001초)
+	- Sync는 길이가 고정이고 Prop와 Phase1, Phase2의 길이를 조절해 Sample Point의 지점을 정해준다.
+	- 속도가 1bps이면 1초에 1bit이고 10Hz라고 정의하면 1bit에 Time Qunta는 10 Time Qunta가 된다.
+	- Sampling Point는 Time Qunta 값을 Phase1,2에 정의해서 정함
+
+- Synchronization
+	- CAN 통신은 BroadCast로 통신하기 때문에 모든 제어기는 동시에 신호를 받을 수 있어야함
+	- 제어기마다 신호를 다르게 받아서 동작하게되면 오류가 생길 수 있음
+	
+	- Tseg1. 클락속도가 빠를 때
+		- 한 제어기에 오류가 있어서 Clock 속도가 빠르면 신호를 더 빠르게 받게됨
+		- 1bit 앞에는 Sync 신호가 있어 빠르게 받은 시간만큼 Phase1의 신호를 연장함
+
+	- Tseg2. 클락속도가 느릴 때
+		- 한 제어기에 오류가 있어서 Clock 속도가 느리면 신호를 더 느리게 받게됨
+		- 1bit 앞에는 Sync 신호가 있어 느리게 받은 시간만큼 Phase2의 신호를 줄여서 시간을 맞춤
+
+	- 길이를 늘리고 줄일 수 있는 최대 길이를 SJW(Synchronization Jump Width)라고 함
