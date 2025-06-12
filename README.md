@@ -149,5 +149,42 @@ CAN 통신 - 자동차 신입이 알아야 할 모든 것(Feat. 존버매니아)
 		- Bus Load가 높으면 통신이 힘들어질 수 있다.
 		- 일반적으로 OEM에서는 최대 Bus Load를 정해준다.
 		- Bus Load를 낮추기 위해선 제어기의 메시지의 주기를 낮춰준다.
+		- Message Transmission Time/Period = %
 
+## 4일차
+- 메세지의 DLC와 시그널
+	- 메세지에는 정보들이 담겨있다. 정보 하나하나를 시그널이라고한다.
+	- 메세지 영역에서 다른 곳은 단위가 bit인데 Data 영역만 byte 단위이다.(최대 8byte)
+	- 데이터 영역이 고정이 아니기 때문에 DLC 영역(Data Length Code)에서 데이터의 영역의 크기를 입력함
+	 
+	 ![메시지 영역](https://github.com/breadcoffee/basic_CAN-2025/blob/main/image/image10.png)
 
+	- 데이터 영역에서 시그널의 자세한 정보가 필요
+	- Signal Detail Information에서 데이터에 맞게 정보를 정리
+	- Start bit, Length, Unit(축약어), signal comment(부가정보), Factor, Offset
+
+	![Signal Information](https://github.com/breadcoffee/basic_CAN-2025/blob/main/image/image11.png)
+
+- Factor & offset
+	- 시그널에서 실수형 데이터는 Float으로 4byte를 차지
+	- 데이터 영역의 낭비를 줄이기 위해서 사용
+
+	- 보내려는 값이 실수일 때
+	- Target Voltage : 12.4V, Factor = 0.1, Offset = 0
+	- Transmitter : (Real Value - offset) / Factor => Tx Signal Value : 124
+	- Receiver : (Rx Value x Factor) + offset => Receiver Interprete 12.4
+	- 12.4 = Float type = 4byte = 32bit 인데 124 = 1111100 7bit 로 낭비를 줄임
+	- Factor 값을 더 작게 설정할수록 결과 값을 더 정밀하게 사용할 수 있음
+	- 단, 적절한 값을 사용 낭비를 줄일 수 있음
+
+	- 반대로 보내려는 값이 클때
+	- Target Voltage : 152,000V, Factor = 1000, Offset = 0
+	- Tx Signal Value : (152,000-0)/1,000 = 152(8bit)
+	- Receiver Interprete : (152 * 1,000) + 0 = 152,000(14bit)
+	- 6bit를 절약할 수 있음
+
+	- 마이너스 값을 보낼 때
+	- Tx Signal : -300,000 <= Speed <= +300,000
+	- Factor : 1000, Offset : -300,000
+	- Tx Signal Value : -152,000-(-300,000) / 1,000 = 148
+	- Receiver Interprete : (148 * 1,000) - 300,000 = -152,000
